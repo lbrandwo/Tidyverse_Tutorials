@@ -1,0 +1,207 @@
+---
+title: "Data Visualization"
+author: "Lbrandwo"
+date: '2022-04-01'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## General Information
+
+If we need to be explicit about where a function (or dataset) comes from, we'll use the special form package::function(). For example, `ggplot2::ggplot()` tells you explicitly that we're using the ggplot() function from the ggplot2 package.
+
+Here we analyse the `ggplot2::mpg` dataset which is a data frame of variables (in the columns) and observations (in the rows).mpg contains observations collected by the US Environmental Protection Agency on 38 models of car.
+
+## Creating a ggplot
+
+`displ` is a cars engine size, in litres. `hwy` is a cars fuel efficiency on the highway in miles per gallon.
+
+We would not use a scatterplot for class and drv because they are both categorical.
+
+```{r mpg}
+#ggplot(data = <DATA>) + 
+        #<GEOM_FUNCTION>(mapping = aes(<MAPPINGS>))
+
+ggplot(data = mpg) + 
+        geom_point(mapping = aes(x = displ, y = hwy))
+
+```
+
+## Aesthetics Mappings
+
+We can map colours to variables to indicate more information about them. Here we map `colour` to `class` and we see that the cars with relatively good mpg despite having a large engine are in fact 2seater sports cars.
+
+```{r finding outliers}
+ggplot(data = mpg) + 
+        geom_point(mapping = aes(x = displ, y = hwy, colour = class))
+```
+
+Using alpha for discrete variables is not very clear. Furthermore, using shape for more than 6 discrete variables in not advised as it becomes hard to distinguish between them.
+
+```{r shape and alpha}
+# Left
+ggplot(data = mpg) + 
+        geom_point(mapping = aes(x = displ, y = hwy, alpha = class))
+
+# Right
+ggplot(data = mpg) + 
+        geom_point(mapping = aes(x = displ, y = hwy, shape = class))
+```
+
+For changing aesthetic properties of the graph in general we can just specify `colour` outside the `aes()`.
+
+```{r changing aes}
+ggplot(data = mpg) + 
+        geom_point(mapping = aes(x = displ, y = hwy), color = "blue")
+```
+
+We can set many `aes()` for each display and even change `colour` based on conditionals.
+
+```{r}
+ggplot(data = mpg) +
+        geom_point(mapping = aes(x = displ, y = hwy, size = class, shape = trans, stroke = 0.5, colour = hwy < 20))
+```
+
+## Facets
+
+Facets are subplots that each display one subset of the data. `facet_wrap()` takes a categorical variable like `class` following `~`, and the `nrow` which you want to spread the facets.
+
+```{r facet_wrap}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) + 
+  facet_wrap(~ class, nrow = 2)
+```
+
+We can facet a plot with a combination of 2 variables using `facet_grid()` which takes 2 categorical variables seperated by `~`. Using `.` as in, `+ facet_grid(. ~ cyl)`, won't facet in the rows or columns dimension. Where you put the `.` determines the axis of facetation.
+
+```{r facet_grid}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) + 
+  facet_grid(drv ~ cyl)
+```
+
+## Different geoms
+
+With `geom_smooth()` we can assign `linetype` to a categorical variable to draw a diff line for each. Here we can overlay 2 geoms and pass the global mappings to ggplot and then specificy plot specific aes individually as well. Instructions given withint the geom functions override global settings for that plot only. `filter()` allows selection of specific data from `mpg`.
+
+```{r multiple geoms}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) + 
+  geom_point(mapping = aes(color = class)) + 
+  geom_smooth(data = filter(mpg, class == "subcompact"), se = FALSE)     
+```
+
+We can choose to not show the legend by assigning the `group` aesthetic to `drv`. Or turning off the legend itself with `show.legend = FALSE`.
+
+```{r turning off legends}
+ggplot(data = mpg) +
+  geom_smooth(mapping = aes(x = displ, y = hwy))
+              
+ggplot(data = mpg) +
+  geom_smooth(mapping = aes(x = displ, y = hwy, group = drv))
+    
+ggplot(data = mpg) +
+  geom_smooth(
+    mapping = aes(x = displ, y = hwy, color = drv),
+    show.legend = FALSE
+  )
+```
+
+## Statistical Transformations
+
+*bar charts, histograms, and frequency polygons bin your data and then plot bin counts, the number of points that fall in each bin.
+
+*smoothers fit a model to your data and then plot predictions from the model.
+
+*boxplots compute a robust summary of the distribution and then display a specially formatted box.
+
+Bar plots can be by count or by proportion and we can show multiple variables within each bar which can also be organized by proportion.
+
+```{r}
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut, fill = clarity))
+
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut, y = after_stat(prop), group = 1))
+
+ggplot(data = diamonds, mapping = aes(x = cut, fill = clarity)) + 
+  geom_bar(alpha = 1/5, position = "identity")
+
+ggplot(data = diamonds, mapping = aes(x = cut, colour = clarity)) + 
+  geom_bar(fill = NA, position = "identity")
+
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut, fill = clarity), position = "fill")
+
+ggplot(data = diamonds) + 
+  geom_bar(mapping = aes(x = cut, fill = clarity), position = "dodge")
+```
+
+`position = "jitter"` adds some random noise to scatterplots which separates the points a little for easier visualization of overlapping values.`geom_jitter()` is a short version of `geom_point(position = "jitter")`.
+
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy), position = "jitter")
+
+```
+
+## Coordinate Systems
+
+* `coord_flip()` switches the x and y axes. This is useful (for example), if you want horizontal boxplots. It’s also useful for long labels: it’s hard to get them to fit without overlapping on the x-axis.
+
+```{r coord flip}
+ggplot(data = mpg, mapping = aes(x = class, y = hwy)) + 
+  geom_boxplot()
+ggplot(data = mpg, mapping = aes(x = class, y = hwy)) + 
+  geom_boxplot() +
+  coord_flip()
+```
+
+* `coord_quickmap()` sets the aspect ratio correctly for maps. This is very important if you’re plotting spatial data with ggplot2 (which unfortunately we don’t have the space to cover in this book).
+
+```{r}
+nz <- map_data("nz")
+
+ggplot(nz, aes(long, lat, group = group)) +
+  geom_polygon(fill = "white", colour = "black")
+
+ggplot(nz, aes(long, lat, group = group)) +
+  geom_polygon(fill = "white", colour = "black") +
+  coord_quickmap()
+```
+
+* `coord_polar()` uses polar coordinates. Polar coordinates reveal an interesting connection between a bar chart and a Coxcomb chart.
+
+```{r}
+bar <- ggplot(data = diamonds) + 
+  geom_bar(
+    mapping = aes(x = cut, fill = cut), 
+    show.legend = FALSE,
+    width = 1
+  ) + 
+  theme(aspect.ratio = 1) +
+  labs(x = NULL, y = NULL)
+
+bar + coord_flip()
+bar + coord_polar()
+```
+This is how you flip a stacked bar plot.
+
+```{r}
+ggplot(data = diamonds) +
+        geom_bar(mapping = aes(x = cut, fill = clarity, position = "fill")) +
+        coord_polar()
+        
+```
+* `geom_abline()` adds the reference line and `coord_fixed()` fixes the x and y axis to represent the same movement in each direction per tick.
+
+```{r}
+ggplot(data = mpg, mapping = aes(x = cty, y = hwy)) +
+  geom_point() + 
+  geom_abline() +
+  coord_fixed()
+```
+
